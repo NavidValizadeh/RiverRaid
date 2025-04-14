@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>River Raid Clone</title>
+  <style>
+    canvas {
+      background: #000;
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+<canvas id="game" width="300" height="400"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+let player = {
+  x: 130,
+  y: 320,
+  width: 20,
+  height: 20,
+  speed: 4
+};
+
+let bullets = [];
+let enemies = [];
+let fuelPickups = [];
+let fuel = 100;
+
+let keys = {};
+let gameOver = false;
+
+document.addEventListener('keydown', (e) => keys[e.key] = true);
+document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+// Terrain scrolling background variables
+let terrainOffset = 0;
+
+function drawRiver() {
+  terrainOffset += 2;
+  if (terrainOffset > canvas.height) terrainOffset = 0;
+
+  // Blue river
+  ctx.fillStyle = 'blue';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Green borders for land
+  ctx.fillStyle = 'green';
+  for (let i = -1; i <= 1; i++) {
+    ctx.fillRect(0, (i * canvas.height) + terrainOffset, 40, canvas.height);
+    ctx.fillRect(260, (i * canvas.height) + terrainOffset, 40, canvas.height);
+  }
+}
+
+function drawPlayer() {
+  ctx.fillStyle = 'white';
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+}
+
+function drawBullets() {
+  ctx.fillStyle = 'yellow';
+  bullets.forEach((b, i) => {
+    b.y -= 5;
+    ctx.fillRect(b.x, b.y, 4, 8);
+    if (b.y < 0) bullets.splice(i, 1);
+  });
+}
+
+function spawnEnemies() {
+  if (Math.random() < 0.02) {
+    enemies.push({
+      x: Math.random() * 220 + 40,
+      y: -20,
+      width: 20,
+      height: 20
+    });
+  }
+}
+
+function drawEnemies() {
+  ctx.fillStyle = 'red';
+  enemies.forEach((e, i) => {
+    e.y += 2;
+    ctx.fillRect(e.x, e.y, e.width, e.height);
+
+    // Bullet collision
+    bullets.forEach((b, j) => {
+      if (b.x < e.x + e.width && b.x + 4 > e.x &&
+          b.y < e.y + e.height && b.y + 8 > e.y) {
+        enemies.splice(i, 1);
+        bullets.splice(j, 1);
+      }
+    });
+
+    if (e.y > canvas.height) enemies.splice(i, 1);
+  });
+}
+
+function spawnFuel() {
+  if (Math.random() < 0.005) {
+    fuelPickups.push({
+      x: Math.random() * 220 + 40,
+      y: -20,
+      width: 16,
+      height: 16
+    });
+  }
+}
+
+function drawFuelPickups() {
+  ctx.fillStyle = 'cyan';
+  fuelPickups.forEach((f, i) => {
+    f.y += 2;
+    ctx.fillRect(f.x, f.y, f.width, f.height);
+
+    // Collision with player
+    if (player.x < f.x + f.width && player.x + player.width > f.x &&
+        player.y < f.y + f.height && player.y + player.height > f.y) {
+      fuel = Math.min(100, fuel + 30); // refill fuel
+      fuelPickups.splice(i, 1);
+    }
+
+    if (f.y > canvas.height) fuelPickups.splice(i, 1);
+  });
+}
+
+function drawFuelBar() {
+  ctx.fillStyle = 'white';
+  ctx.fillRect(10, 10, 100, 10);
+  ctx.fillStyle = 'lime';
+  ctx.fillRect(10, 10, fuel, 10);
+  ctx.strokeStyle = 'black';
+  ctx.strokeRect(10, 10, 100, 10);
+}
+
+function update() {
+  if (gameOver) return;
+
+  // Movement
+  if (keys['ArrowLeft'] && player.x > 40) player.x -= player.speed;
+  if (keys['ArrowRight'] && player.x + player.width < 260) player.x += player.speed;
+  if (keys[' '] && bullets.length < 5 && !keys['__fired']) {
+    bullets.push({ x: player.x + 8, y: player.y });
+    keys['__fired'] = true; // Simple rate limit
+  }
+  if (!keys[' ']) keys['__fired'] = false;
+
+  fuel -= 0.1;
+  if (fuel <= 0) {
+    gameOver = true;
+    alert('Out of fuel! Game Over.');
+    return;
+  }
+
+  // Drawing and updates
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawRiver();
+  drawPlayer();
+  drawBullets();
+  spawnEnemies();
+  drawEnemies();
+  spawnFuel();
+  drawFuelPickups();
+  drawFuelBar();
+
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+</body>
+</html>
